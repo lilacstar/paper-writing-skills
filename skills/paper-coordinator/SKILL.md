@@ -4,7 +4,7 @@ version: "1.0"
 description: |
   科学论文写作总协调器。本 Skill 应在论文写作项目的任何阶段首先加载，作为唯一的统一入口。
   它负责初始化共享工作区、管理写作进度、推荐下一步应使用的 Skill。
-  当用户提到“开始写论文”、“论文进度”、“下一步该做什么”时触发。
+  当用户提到"开始写论文"、"论文进度"、"下一步该做什么"时触发。
 read_when:
   - 用户开始一个新的论文写作项目
   - 用户询问论文写作进度
@@ -68,30 +68,46 @@ read_when:
    | 审校润色 | 待处理 | - |
 
    ## 验证记录
+
+   <!-- 每次验证后在此追加记录 -->
    ```
 
-   **outline.md**（空文件，后续由 paper-writer 或用户填充）
+   **outline.md**（空文件，后续由 paper-writer 或用户填充）：
+   ```markdown
+   # 论文大纲
 
-3. 如用户已有素材，读取内容并写入对应的共享工作区文件，跳过对应阶段
+   <!-- 由 paper-writer 或用户填充 -->
+   ```
 
-4. 根据当前阶段推荐用户加载的第一个 Skill
+3. 如用户已有素材（文献文件、草稿等），读取内容并写入对应的共享工作区文件，跳过对应阶段
+
+4. 根据当前阶段推荐用户加载的第一个 Skill：
+   - 阶段"文献调研"：推荐 `literature-reviewer`
+   - 阶段"论文写作"：推荐 `paper-writer`
+   - 阶段"摘要标题"：推荐 `abstract-writer`
+   - 阶段"审校润色"：推荐 `paper-polisher`
 
 ### 后续使用
 
-每次加载时：
+每次加载时，执行以下步骤：
 
 1. 读取 `paper/metadata.json` 和 `paper/progress.md`
-2. 展示当前进度摘要
-3. 如有未处理的致命问题，优先展示回退建议
+2. 向用户展示当前进度摘要（哪些阶段已完成，哪些待处理）
+3. 如果 `paper/review-report.md` 中有未处理的致命问题，优先展示回退建议
 4. 推荐下一步应加载的 Skill
 
 ### 合并全文
 
-当用户请求“合并全文”时：
+当用户请求"合并全文"或"生成完整草稿"时：
 
-1. 按顺序读取分章节文件，合并为 `paper/draft-full.md`
-2. 如 `paper/draft-full.md` 已存在，先备份为 `paper/draft-full-v{n}.md`
-3. 更新 `paper/progress.md`
+1. 按以下顺序读取分章节文件，合并为 `paper/draft-full.md`：
+   - `paper/draft-intro.md`（如果存在）
+   - `paper/draft-methods.md`（如果存在）
+   - `paper/draft-results.md`（如果存在）
+   - `paper/draft-discussion.md`（如果存在）
+   - `paper/draft-conclusion.md`（如果存在）
+2. 如果 `paper/draft-full.md` 已存在，先备份为 `paper/draft-full-v{n}.md`（n 自增）
+3. 更新 `paper/progress.md` 中的合并状态
 
 ## 阶段与 Skill 对应关系
 
@@ -104,13 +120,27 @@ read_when:
 
 ## 回退建议规则
 
-- verify-content 报告致命问题 → 建议回退到“论文写作”阶段
-- verify-abstract 报告致命问题 → 建议回退到“摘要标题”或“论文写作”阶段
+读取 `paper/review-report.md` 时，如果发现致命问题，按以下规则给出回退建议：
+
+- verify-content 报告致命问题 → 建议回退到"论文写作"阶段，使用 paper-writer 修改对应章节
+- verify-abstract 报告致命问题 → 建议回退到"摘要标题"阶段使用 abstract-writer 重写，或回退到"论文写作"修改正文
+
+## 输入输出
+
+- 输入：用户的论文信息和当前状态
+- 输出：进度报告 + 下一步 Skill 推荐 + 合并后的完整草稿（按需）
 
 ## 文件读写约定
 
 | 操作 | 文件 |
 |------|------|
 | 读取 | `paper/metadata.json`, `paper/progress.md`, `paper/review-report.md` |
-| 写入 | `paper/metadata.json`，`paper/progress.md`，`paper/draft-full.md` |
+| 写入 | `paper/metadata.json`（初始化时）, `paper/progress.md`, `paper/draft-full.md`（合并时） |
 | 创建 | `paper/` 目录及所有初始文件（首次使用时） |
+
+## 注意事项
+
+- 本 Skill 不执行任何写作、验证或润色任务，只做协调管理
+- 推荐具体 Skill 时，简要说明该 Skill 的作用和使用方式
+- 合并全文时保留各章节文件的独立性，不删除分章节文件
+- 所有文件路径相对于当前工作区根目录
