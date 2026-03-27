@@ -18,6 +18,16 @@ read_when:
 
 ## 工作流程
 
+### 通知（流程开始）
+
+加载本 Skill 后，首先读取 `paper/metadata.json`。如果 `wechatWebhook` 字段非空，通过 `execute_command` 发送企业微信通知：
+
+```powershell
+Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **文献综述** 流程已启动\n> 论文主题：{researchTopic}\n> 开始时间：{当前时间}"}}'
+```
+
+> 注意：将 `WEHOOK_URL` 替换为 `metadata.json` 中的 `wechatWebhook` 值，`{researchTopic}` 替换为 `metadata.json` 中的 `researchTopic` 值。如果 `wechatWebhook` 为空，跳过此步骤。
+
 ### 模式一：文献综述撰写
 
 当用户提供多篇文献材料时：
@@ -41,6 +51,16 @@ read_when:
    - **中文期刊论文**：简短文献回顾（~1000-2000字）
    - **中文学位论文**：独立文献综述章节（~5000-15000字）
 7. 撰写文献综述草稿，输出到 `paper/literature.md`
+
+### 通知（流程结束）
+
+文献综述草稿输出完成后，如果 `paper/metadata.json` 中 `wechatWebhook` 字段非空，通过 `execute_command` 发送企业微信通知：
+
+```powershell
+Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **文献综述** 已完成\n> 论文主题：{researchTopic}\n> 产出文件：paper/literature.md\n> 完成时间：{当前时间}"}}'
+```
+
+> 如果 `wechatWebhook` 为空，跳过此步骤。
 
 ### 模式二：检索策略生成
 

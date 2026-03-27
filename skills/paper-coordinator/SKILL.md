@@ -48,9 +48,12 @@ read_when:
      "currentPhase": "topic",
      "version": "v1",
      "createdAt": "日期",
-     "lastModified": "日期"
+     "lastModified": "日期",
+     "wechatWebhook": ""
    }
    ```
+
+   其中 `wechatWebhook` 为企业微信群机器人 Webhook URL（可选），用于在各 Skill 流程开始和结束时发送简短通知。如果用户提供了该 URL，所有后续 Skill 会自动在关键节点推送消息。
 
    **progress.md**（初始化为全部待处理）：
    ```markdown
@@ -59,7 +62,7 @@ read_when:
    ## 阶段状态
 
    | 阶段 | 状态 | 最后更新 |
-   |------|------|---------|
+   |------|------|--------|
    | 文献调研 | 待处理 | - |
    | 研究设计 | 待处理 | - |
    | 数据分析 | 待处理 | - |
@@ -81,11 +84,15 @@ read_when:
 
 3. 如用户已有素材（文献文件、草稿等），读取内容并写入对应的共享工作区文件，跳过对应阶段
 
-4. 根据当前阶段推荐用户加载的第一个 Skill：
+4. 如果用户提供了企业微信 Webhook URL，将其写入 `metadata.json` 的 `wechatWebhook` 字段
+
+5. 根据当前阶段推荐用户加载的第一个 Skill：
    - 阶段"文献调研"：推荐 `literature-reviewer`
    - 阶段"论文写作"：推荐 `paper-writer`
    - 阶段"摘要标题"：推荐 `abstract-writer`
    - 阶段"审校润色"：推荐 `paper-polisher`
+
+6. 初始化完成后，通过企业微信通知用户（如已配置 `wechatWebhook`）
 
 ### 后续使用
 
@@ -133,10 +140,53 @@ read_when:
 ## 文件读写约定
 
 | 操作 | 文件 |
-|------|------|
+|------|--------|
 | 读取 | `paper/metadata.json`, `paper/progress.md`, `paper/review-report.md` |
 | 写入 | `paper/metadata.json`（初始化时）, `paper/progress.md`, `paper/draft-full.md`（合并时） |
 | 创建 | `paper/` 目录及所有初始文件（首次使用时） |
+
+## 企业微信通知机制
+
+所有 Skill 共享统一的企业微信通知机制。通知为可选功能，通过 `paper/metadata.json` 中的 `wechatWebhook` 字段控制。
+
+### 通知条件
+
+- 仅当 `paper/metadata.json` 中 `wechatWebhook` 字段非空时才发送通知
+- 如果该字段为空，跳过所有通知步骤，不影响正常工作流程
+
+### 通知时机
+
+每个 Skill 在以下两个时机发送通知：
+- **流程开始**：Skill 开始执行核心任务前
+- **流程结束**：Skill 完成核心任务并输出文件后
+
+### 通知格式
+
+使用 `execute_command` 工具发送 POST 请求：
+
+**流程开始通知**：
+```powershell
+Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **[Skill名称]** 流程已启动\n> 论文主题：{researchTopic}\n> 当前阶段：{phaseName}\n> 开始时间：{当前时间}"}}'
+```
+
+**流程结束通知**：
+```powershell
+Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **[Skill名称]** 已完成\n> 论文主题：{researchTopic}\n> 产出文件：{输出文件列表}\n> 完成时间：{当前时间}"}}'
+```
+
+其中 `{researchTopic}` 从 `paper/metadata.json` 的 `researchTopic` 字段读取，`WEBHOOK_URL` 从 `wechatWebhook` 字段读取。
+
+### 各 Skill 通知消息模板
+
+| Skill | 开始消息 | 结束消息 |
+|-------|---------|--------|
+| paper-coordinator | 项目初始化已启动 | 项目初始化完成，推荐下一步：{skill} |
+| literature-reviewer | 文献综述撰写已启动 | 文献综述草稿已输出 → paper/literature.md |
+| paper-writer | {章节名}写作已启动 | {章节名}草稿已输出 → paper/draft-{chapter}.md |
+| abstract-writer | 摘要与标题生成已启动 | 摘要草稿已输出 → paper/abstract.md |
+| paper-polisher | 润色检查已启动（{范围}） | 润色完成，共 X 处修改建议 |
+| verify-content | 内容验证已启动（{范围}） | 验证完成：通过 Y / 问题 Z（致命 A） |
+| verify-abstract | 摘要验证已启动 | 验证完成：一致 Y / 不一致 Z |
 
 ## 注意事项
 
