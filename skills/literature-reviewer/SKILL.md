@@ -23,10 +23,13 @@ read_when:
 加载本 Skill 后，首先读取 `paper/metadata.json`。如果 `wechatWebhook` 字段非空，通过 `execute_command` 发送企业微信通知：
 
 ```powershell
-Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **文献综述** 流程已启动\n> 论文主题：{researchTopic}\n> 开始时间：{当前时间}"}}'
+if (-not (Test-Path "C:\Temp")) { New-Item -Path "C:\Temp" -ItemType Directory -Force }
+$msg = '{"msgtype":"text","text":{"content":"[文献综述] 流程已启动\n论文主题：TOPIC\n开始时间：TIME"}}';
+[System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
 ```
 
-> 注意：将 `WEHOOK_URL` 替换为 `metadata.json` 中的 `wechatWebhook` 值，`{researchTopic}` 替换为 `metadata.json` 中的 `researchTopic` 值。如果 `wechatWebhook` 为空，跳过此步骤。
+> 注意：将 `WEBHOOK_URL` 替换为 `metadata.json` 中的 `wechatWebhook` 值，`TOPIC` 替换为 `researchTopic` 值，`TIME` 替换为当前时间。如果 `wechatWebhook` 为空，跳过此步骤。
 
 ### 模式一：文献综述撰写
 
@@ -57,7 +60,9 @@ Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json"
 文献综述草稿输出完成后，如果 `paper/metadata.json` 中 `wechatWebhook` 字段非空，通过 `execute_command` 发送企业微信通知：
 
 ```powershell
-Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **文献综述** 已完成\n> 论文主题：{researchTopic}\n> 产出文件：paper/literature.md\n> 完成时间：{当前时间}"}}'
+$msg = '{"msgtype":"text","text":{"content":"[文献综述] 已完成\n论文主题：TOPIC\n产出文件：paper/literature.md\n完成时间：TIME"}}';
+[System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
 ```
 
 > 如果 `wechatWebhook` 为空，跳过此步骤。
