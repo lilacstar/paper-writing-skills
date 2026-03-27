@@ -32,11 +32,22 @@ read_when:
 
 ## 工作流程
 
+0. **通知（流程开始）**：读取 `paper/metadata.json`，如果 `wechatWebhook` 非空，发送企业微信通知：
+   ```powershell
+   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **摘要验证** 流程已启动\n> 论文主题：{researchTopic}\n> 开始时间：{当前时间}"}}'
+   ```
+   > 如果 `wechatWebhook` 为空，跳过。
+
 1. 读取 `paper/metadata.json` 获取论文类型
 2. 读取 `paper/abstract.md`（摘要和标题）
 3. 读取论文全文（`paper/draft-full.md` 或所有 `paper/draft-*.md`）
 4. 按检查清单逐项对照
 5. 生成对照报告，追加写入 `paper/review-report.md`
+6. **通知（流程结束）**：如果 `wechatWebhook` 非空，发送企业微信通知：
+   ```powershell
+   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **摘要验证** 已完成\n> 论文主题：{researchTopic}\n> 验证结果：一致 {一致数} / 不一致 {不一致数}\n> 产出文件：paper/review-report.md\n> 完成时间：{当前时间}"}}'
+   ```
+   > 如果 `wechatWebhook` 为空，跳过。
 
 ## 检查清单
 
