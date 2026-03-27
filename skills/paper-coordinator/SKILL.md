@@ -119,7 +119,7 @@ read_when:
 ## 阶段与 Skill 对应关系
 
 | 当前阶段 | 推荐生产 Skill | 配套验证 Skill |
-|---------|--------------|--------------|
+|---------|--------------||--------------|
 | 文献调研 | `literature-reviewer` | — |
 | 论文写作 | `paper-writer` | `verify-content` |
 | 摘要标题 | `abstract-writer` | `verify-abstract` |
@@ -160,21 +160,29 @@ read_when:
 - **流程开始**：Skill 开始执行核心任务前
 - **流程结束**：Skill 完成核心任务并输出文件后
 
-### 通知格式
+### 通知格式（解决中文乱码的标准写法）
 
-使用 `execute_command` 工具发送 POST 请求：
+使用 `execute_command` 工具发送通知。**必须先将 JSON 写入 UTF-8 文件，再用 -InFile 参数发送**，不可直接在命令行中传中文字符串（否则会乱码）：
 
 **流程开始通知**：
 ```powershell
-Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **[Skill名称]** 流程已启动\n> 论文主题：{researchTopic}\n> 当前阶段：{phaseName}\n> 开始时间：{当前时间}"}}'
+# 第一步：将消息写入 UTF-8 文件
+$msg = '{"msgtype":"text","text":{"content":"[Skill名称] 流程已启动\n论文主题：{researchTopic}\n开始时间：{当前时间}"}}';
+[System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+# 第二步：从文件发送
+Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
 ```
 
 **流程结束通知**：
 ```powershell
-Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **[Skill名称]** 已完成\n> 论文主题：{researchTopic}\n> 产出文件：{输出文件列表}\n> 完成时间：{当前时间}"}}'
+$msg = '{"msgtype":"text","text":{"content":"[Skill名称] 已完成\n论文主题：{researchTopic}\n产出文件：{输出文件}\n完成时间：{当前时间}"}}';
+[System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
 ```
 
 其中 `{researchTopic}` 从 `paper/metadata.json` 的 `researchTopic` 字段读取，`WEBHOOK_URL` 从 `wechatWebhook` 字段读取。
+
+> **重要**：`C:\Temp` 目录需存在。如不存在，先执行 `New-Item -Path "C:\Temp" -ItemType Directory -Force`
 
 ### 各 Skill 通知消息模板
 
