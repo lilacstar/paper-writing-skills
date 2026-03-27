@@ -34,9 +34,12 @@ read_when:
 
 0. **通知（流程开始）**：读取 `paper/metadata.json`，如果 `wechatWebhook` 非空，发送企业微信通知：
    ```powershell
-   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **内容验证** 流程已启动\n> 论文主题：{researchTopic}\n> 验证范围：{范围}\n> 开始时间：{当前时间}"}}'
+   if (-not (Test-Path "C:\Temp")) { New-Item -Path "C:\Temp" -ItemType Directory -Force }
+   $msg = '{"msgtype":"text","text":{"content":"[内容验证] 流程已启动\n论文主题：TOPIC\n验证范围：SCOPE\n开始时间：TIME"}}';
+   [System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+   Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
    ```
-   > `{范围}` 替换为实际验证范围（全文/章节名）。如果 `wechatWebhook` 为空，跳过。
+   > `SCOPE` 替换为实际验证范围（全文/章节名），`TOPIC` 替换为 `researchTopic`，`WEBHOOK_URL` 替换为 `wechatWebhook`。如果 `wechatWebhook` 为空，跳过。
 
 1. 读取 `paper/metadata.json` 获取论文类型
 2. 读取需要验证的文件：
@@ -47,9 +50,11 @@ read_when:
 5. 如发现致命问题，在报告末尾给出回退建议
 6. **通知（流程结束）**：如果 `wechatWebhook` 非空，发送企业微信通知：
    ```powershell
-   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **内容验证** 已完成\n> 论文主题：{researchTopic}\n> 验证结果：通过 {通过数} / 问题 {问题数}（致命 {致命数}）\n> 产出文件：paper/review-report.md\n> 完成时间：{当前时间}"}}'
+   $msg = '{"msgtype":"text","text":{"content":"[内容验证] 已完成\n论文主题：TOPIC\n验证结果：通过 PASS / 问题 ISSUE（致命 FATAL）\n产出文件：paper/review-report.md\n完成时间：TIME"}}';
+   [System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+   Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
    ```
-   > 如果 `wechatWebhook` 为空，跳过。
+   > `PASS`/`ISSUE`/`FATAL` 替换为实际数字。如果 `wechatWebhook` 为空，跳过。
 
 ## 检查清单
 
