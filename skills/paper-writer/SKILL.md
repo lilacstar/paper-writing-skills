@@ -32,6 +32,12 @@ read_when:
 
 每个章节的写作都遵循以下流程：
 
+0. **通知（流程开始）**：读取 `paper/metadata.json`，如果 `wechatWebhook` 非空，发送企业微信通知：
+   ```powershell
+   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **{章节名}写作** 流程已启动\n> 论文主题：{researchTopic}\n> 开始时间：{当前时间}"}}'
+   ```
+   > `{章节名}` 根据用户指定的章节替换（如"引言"、"Methods"等）。如果 `wechatWebhook` 为空，跳过。
+
 1. 读取 `paper/metadata.json` 获取论文类型和语言
 2. 读取 `paper/outline.md` 获取大纲（如存在）
 3. 读取 `paper/literature.md` 获取文献综述（如存在，写作引言时必读）
@@ -42,6 +48,11 @@ read_when:
 8. 将草稿写入对应的分章节文件
 9. 更新 `paper/progress.md`
 10. 询问用户是否继续写下一章节
+11. **通知（流程结束）**：如果 `wechatWebhook` 非空，发送企业微信通知：
+    ```powershell
+    Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **{章节名}写作** 已完成\n> 论文主题：{researchTopic}\n> 产出文件：paper/draft-{chapter}.md\n> 完成时间：{当前时间}"}}'
+    ```
+    > 如果 `wechatWebhook` 为空，跳过。
 
 ## 各章节写作规范
 

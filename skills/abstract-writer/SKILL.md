@@ -24,6 +24,12 @@ read_when:
 
 ## 工作流程
 
+0. **通知（流程开始）**：读取 `paper/metadata.json`，如果 `wechatWebhook` 非空，发送企业微信通知：
+   ```powershell
+   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **摘要与标题生成** 流程已启动\n> 论文主题：{researchTopic}\n> 开始时间：{当前时间}"}}'
+   ```
+   > 如果 `wechatWebhook` 为空，跳过。
+
 1. 读取 `paper/metadata.json` 获取论文类型和语言
 2. 读取论文全文（`paper/draft-full.md` 或逐个读取 `paper/draft-*.md`）
 3. 向用户确认摘要格式：
@@ -33,6 +39,12 @@ read_when:
 4. 生成摘要
 5. 生成 3-5 个候选标题
 6. 输出到 `paper/abstract.md`
+
+7. **通知（流程结束）**：如果 `wechatWebhook` 非空，发送企业微信通知：
+   ```powershell
+   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **摘要与标题生成** 已完成\n> 论文主题：{researchTopic}\n> 产出文件：paper/abstract.md\n> 完成时间：{当前时间}"}}'
+   ```
+   > 如果 `wechatWebhook` 为空，跳过。
 
 ## 摘要撰写规范
 
