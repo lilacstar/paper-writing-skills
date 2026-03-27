@@ -25,9 +25,12 @@ read_when:
 
 0. **通知（流程开始）**：读取 `paper/metadata.json`，如果 `wechatWebhook` 非空，发送企业微信通知：
    ```powershell
-   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **润色检查** 流程已启动\n> 论文主题：{researchTopic}\n> 润色范围：{范围}\n> 开始时间：{当前时间}"}}'
+   if (-not (Test-Path "C:\Temp")) { New-Item -Path "C:\Temp" -ItemType Directory -Force }
+   $msg = '{"msgtype":"text","text":{"content":"[润色检查] 流程已启动\n论文主题：TOPIC\n润色范围：SCOPE\n开始时间：TIME"}}';
+   [System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+   Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
    ```
-   > `{范围}` 替换为实际润色范围（全文/章节名/摘要）。如果 `wechatWebhook` 为空，跳过。
+   > `SCOPE` 替换为实际润色范围（全文/章节名/摘要），`TOPIC` 替换为 `researchTopic`，`WEBHOOK_URL` 替换为 `wechatWebhook`。如果 `wechatWebhook` 为空，跳过。
 
 1. 读取 `paper/metadata.json` 获取论文类型和语言
 2. 确认润色范围：
@@ -39,9 +42,11 @@ read_when:
 5. 根据用户确认，更新对应文件
 6. **通知（流程结束）**：如果 `wechatWebhook` 非空，发送企业微信通知：
    ```powershell
-   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **润色检查** 已完成\n> 论文主题：{researchTopic}\n> 检查结果：共 {总数} 处（必须修改 {必须数} / 建议修改 {建议数}）\n> 完成时间：{当前时间}"}}'
+   $msg = '{"msgtype":"text","text":{"content":"[润色检查] 已完成\n论文主题：TOPIC\n检查结果：共 TOTAL 处（必须修改 MUST / 建议修改 SUGGEST）\n完成时间：TIME"}}';
+   [System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+   Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
    ```
-   > 如果 `wechatWebhook` 为空，跳过。
+   > `TOTAL`/`MUST`/`SUGGEST` 替换为实际统计数字。如果 `wechatWebhook` 为空，跳过。
 
 ## 语言润色规范
 
