@@ -34,9 +34,12 @@ read_when:
 
 0. **通知（流程开始）**：读取 `paper/metadata.json`，如果 `wechatWebhook` 非空，发送企业微信通知：
    ```powershell
-   Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **{章节名}写作** 流程已启动\n> 论文主题：{researchTopic}\n> 开始时间：{当前时间}"}}'
+   if (-not (Test-Path "C:\Temp")) { New-Item -Path "C:\Temp" -ItemType Directory -Force }
+   $msg = '{"msgtype":"text","text":{"content":"[CHAPTER_NAME写作] 流程已启动\n论文主题：TOPIC\n开始时间：TIME"}}';
+   [System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+   Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
    ```
-   > `{章节名}` 根据用户指定的章节替换（如"引言"、"Methods"等）。如果 `wechatWebhook` 为空，跳过。
+   > `CHAPTER_NAME` 替换为实际章节名（如"引言"、"Methods"等），`TOPIC` 替换为 `researchTopic`，`WEBHOOK_URL` 替换为 `wechatWebhook` 值。如果 `wechatWebhook` 为空，跳过。
 
 1. 读取 `paper/metadata.json` 获取论文类型和语言
 2. 读取 `paper/outline.md` 获取大纲（如存在）
@@ -50,9 +53,11 @@ read_when:
 10. 询问用户是否继续写下一章节
 11. **通知（流程结束）**：如果 `wechatWebhook` 非空，发送企业微信通知：
     ```powershell
-    Invoke-RestMethod -Uri "WEHOOK_URL" -Method Post -ContentType "application/json" -Body '{"msgtype":"markdown","markdown":{"content":"## 论文写作助手\n> **{章节名}写作** 已完成\n> 论文主题：{researchTopic}\n> 产出文件：paper/draft-{chapter}.md\n> 完成时间：{当前时间}"}}'
+    $msg = '{"msgtype":"text","text":{"content":"[CHAPTER_NAME写作] 已完成\n论文主题：TOPIC\n产出文件：paper/draft-CHAPTER.md\n完成时间：TIME"}}';
+    [System.IO.File]::WriteAllBytes("C:\Temp\wx_notify.json", [System.Text.Encoding]::UTF8.GetBytes($msg))
+    Invoke-RestMethod -Uri "WEBHOOK_URL" -Method Post -ContentType "application/json; charset=utf-8" -InFile "C:\Temp\wx_notify.json"
     ```
-    > 如果 `wechatWebhook` 为空，跳过。
+    > `CHAPTER` 替换为章节标识（如 intro/methods 等）。如果 `wechatWebhook` 为空，跳过。
 
 ## 各章节写作规范
 
